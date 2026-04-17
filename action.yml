@@ -1,26 +1,20 @@
-name: 'Todoist Readme'
-author: Abhishek Naidu
-description: '🚧 Updates README with your Todoist stats'
+name: 'Habitica Readme'
+author: Oleksandr Yalovyi
+description: '🚧 Updates README with your Habitica stats'
 
 inputs:
-  TODOIST_API_KEY:
-    description: 'Your Todoist API Key'
+  HABITICA_USER_ID:
+    description: 'Your Habitica User ID'
     required: true
 
-  USERNAME:
-    description: 'Your GitHub username'
-    default: ${{ github.repository_owner }}
-    required: false
-  
-  PREMIUM:
-    description: 'Premium User or Not'
-    default: false
-    required: false
+  HABITICA_TOKEN:
+    description: 'Your Habitica API Token'
+    required: true
 
 runs:
-  using: "node12"
+  using: "node20"
   main: "dist/index.js"
 
 branding:
   icon: "activity"
-  color: "red"
+  color: "blue"

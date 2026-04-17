@@ -4,60 +4,114 @@ const Humanize = require("humanize-plus");
 const fs = require("fs");
 const exec = require("./exec");
 
-const TODOIST_API_KEY = core.getInput("TODOIST_API_KEY");
-const PREMIUM = core.getInput("PREMIUM");
+const HABITICA_USER_ID = core.getInput("HABITICA_USER_ID");
+const HABITICA_TOKEN = core.getInput("HABITICA_TOKEN");
 
-async function main() {
-  // v8 => v9
-  const stats = await axios(
-    "https://api.todoist.com/sync/v9/completed/get_stats",
-    { headers: { Authorization: `Bearer ${TODOIST_API_KEY}` } }
-  );
-  await updateReadme(stats.data);
+const habiticaHeaders = {
+  "X-Client": `${HABITICA_USER_ID}-action`,
+  "X-Api-Key": HABITICA_TOKEN,
+  "X-Api-User": HABITICA_USER_ID,
+};
+
+async function fetchHabiticaData() {
+  const [dailiesResponse, todosResponse] = await Promise.all([
+    axios.get("https://habitica.com/api/v3/tasks/user?type=dailys", {
+      headers: habiticaHeaders,
+    }),
+    axios.get("https://habitica.com/api/v3/tasks/user?type=completedTodos", {
+      headers: habiticaHeaders,
+    }),
+  ]);
+
+  return {
+    dailies: dailiesResponse.data.data,
+    todos: todosResponse.data.data,
+  };
 }
 
-let todoist = [];
+async function main() {
+  const { dailies, todos } = await fetchHabiticaData();
+  const stats = calculateStats(dailies, todos);
+  await updateReadme(stats);
+}
+
+function calculateStats(dailies, todos) {
+  // Dailies stats
+  const completedDailiesToday = dailies.filter((d) => d.completed).length;
+
+  const now = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(now.getDate() - 7);
+
+  const completedDailiesWeek = dailies.reduce((sum, task) => {
+    const count = (task.history || []).filter((entry) => {
+      const date = new Date(entry.date);
+      return date >= weekAgo && entry.value > 0;
+    }).length;
+    return sum + count;
+  }, 0);
+
+  const totalDailyCompletions = dailies.reduce(
+    (sum, d) => sum + (d.counter || 0),
+    0,
+  );
+
+  // Todos stats
+  const today = new Date().toDateString();
+  const todosToday = todos.filter(
+    (t) => new Date(t.dateCompleted).toDateString() === today,
+  ).length;
+
+  const todosThisWeek = todos.filter((t) => {
+    const date = new Date(t.dateCompleted);
+    return date >= weekAgo;
+  }).length;
+
+  const todosAllTime = todos.length;
+
+  console.log({
+    completedDailiesToday,
+    completedDailiesWeek,
+    totalDailyCompletions,
+    todosToday,
+    todosThisWeek,
+    todosAllTime,
+  });
+
+  return {
+    today: completedDailiesToday + todosToday,
+    week: completedDailiesWeek + todosThisWeek,
+    allTime: totalDailyCompletions + todosAllTime,
+  };
+}
+
+let habiticaStats = [];
 let jobFailFlag = false;
 const README_FILE_PATH = "./README.md";
 
-async function updateReadme(data) {
-  const { karma, completed_count, days_items, goals, week_items } = data;
+async function updateReadme(stats) {
+  const { today, week, allTime } = stats;
 
-  const karmaPoint = [`🏆  **${Humanize.intComma(karma)}** Karma Points`];
-  todoist.push(karmaPoint);
+  const todayStats = [`🎯  Completed **${today}** tasks today`];
+  habiticaStats.push(todayStats);
 
-  const dailyGoal = [
-    `🌸  Completed **${days_items[0].total_completed.toString()}** tasks today`,
+  const weekStats = [`📅  Completed **${week}** tasks this week`];
+  habiticaStats.push(weekStats);
+
+  const allTimeStats = [
+    `⭐  Completed **${Humanize.intComma(allTime)}** tasks all time`,
   ];
-  todoist.push(dailyGoal);
+  habiticaStats.push(allTimeStats);
 
-  if (PREMIUM == "true") {
-    const weekItems = [
-      `🗓  Completed **${week_items[0].total_completed.toString()}** tasks this week`,
-    ];
-    todoist.push(weekItems);
-  }
+  if (habiticaStats.length == 0) return;
 
-  const totalTasks = [
-    `✅  Completed **${Humanize.intComma(completed_count)}** tasks so far`,
-  ];
-  todoist.push(totalTasks);
-
-  const longestStreak = [
-    `⏳  Longest streak is **${goals.max_daily_streak.count}** days`,
-  ];
-  todoist.push(longestStreak);
-
-  if (todoist.length == 0) return;
-
-  if (todoist.length > 0) {
-    // console.log(todoist.length);
-    // const showTasks = todoist.reduce((todo, cur, index) => {
-    //   return todo + `\n${cur}        ` + (((index + 1) === todoist.length) ? '\n' : '');
-    // })
+  if (habiticaStats.length > 0) {
     const readmeData = fs.readFileSync(README_FILE_PATH, "utf8");
 
-    const newReadme = buildReadme(readmeData, todoist.join("           \n"));
+    const newReadme = buildReadme(
+      readmeData,
+      habiticaStats.join("           \n"),
+    );
     if (newReadme !== readmeData) {
       core.info("Writing to " + README_FILE_PATH);
       fs.writeFileSync(README_FILE_PATH, newReadme);
@@ -74,21 +128,19 @@ async function updateReadme(data) {
   }
 }
 
-// console.log(todoist.length);
-
 const buildReadme = (prevReadmeContent, newReadmeContent) => {
-  const tagToLookFor = "<!-- TODO-IST:";
+  const tagToLookFor = "<!-- HABITICA:";
   const closingTag = "-->";
   const startOfOpeningTagIndex = prevReadmeContent.indexOf(
-    `${tagToLookFor}START`
+    `${tagToLookFor}START`,
   );
   const endOfOpeningTagIndex = prevReadmeContent.indexOf(
     closingTag,
-    startOfOpeningTagIndex
+    startOfOpeningTagIndex,
   );
   const startOfClosingTagIndex = prevReadmeContent.indexOf(
     `${tagToLookFor}END`,
-    endOfOpeningTagIndex
+    endOfOpeningTagIndex,
   );
   if (
     startOfOpeningTagIndex === -1 ||
@@ -96,7 +148,7 @@ const buildReadme = (prevReadmeContent, newReadmeContent) => {
     startOfClosingTagIndex === -1
   ) {
     core.error(
-      `Cannot find the comment tag on the readme:\n<!-- ${tagToLookFor}:START -->\n<!-- ${tagToLookFor}:END -->`
+      `Cannot find the comment tag on the readme:\n<!-- HABITICA:START -->\n<!-- HABITICA:END -->`,
     );
     process.exit(1);
   }
@@ -111,15 +163,14 @@ const buildReadme = (prevReadmeContent, newReadmeContent) => {
 
 const commitReadme = async () => {
   // Getting config
-  const committerUsername = "Abhishek Naidu";
-  const committerEmail = "example@gmail.com";
-  const commitMessage = "Todoist updated.";
+  const committerUsername = "Habitica Bot";
+  const committerEmail = "noreply@habitica.com";
+  const commitMessage = "chore: update habitica stats in README";
   // Doing commit and push
   await exec("git", ["config", "--global", "user.email", committerEmail]);
   await exec("git", ["config", "--global", "user.name", committerUsername]);
   await exec("git", ["add", README_FILE_PATH]);
   await exec("git", ["commit", "-m", commitMessage]);
-  // await exec('git', ['fetch']);
   await exec("git", ["push"]);
   core.info("Readme updated successfully.");
   // Making job fail if one of the source fails
