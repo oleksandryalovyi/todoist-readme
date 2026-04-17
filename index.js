@@ -2,6 +2,7 @@ const core = require("@actions/core");
 const axios = require("axios");
 const Humanize = require("humanize-plus");
 const fs = require("fs");
+const os = require("os");
 const exec = require("./exec");
 
 const HABITICA_USER_ID = core.getInput("HABITICA_USER_ID");
@@ -178,13 +179,32 @@ const commitReadme = async () => {
   const committerUsername = "Habitica Bot";
   const committerEmail = "noreply@habitica.com";
   const commitMessage = "chore: update habitica stats in README";
+  const githubToken = process.env.GITHUB_TOKEN;
+
+  if (!githubToken) {
+    core.error("GITHUB_TOKEN environment variable is not set");
+    process.exit(1);
+  }
+
   // Doing commit and push
   await exec("git", ["config", "--global", "user.email", committerEmail]);
   await exec("git", ["config", "--global", "user.name", committerUsername]);
+  await exec("git", ["config", "--global", "credential.helper", "store"]);
+
+  // Create credentials file for git authentication
+  const homeDir = os.homedir();
+  const credentialsFile = `${homeDir}/.git-credentials`;
+  const credentials = `https://x-access-token:${githubToken}@github.com\n`;
+  fs.writeFileSync(credentialsFile, credentials, { mode: 0o600 });
+
   await exec("git", ["add", README_FILE_PATH]);
   await exec("git", ["commit", "-m", commitMessage]);
   await exec("git", ["push"]);
   core.info("Readme updated successfully.");
+
+  // Clean up credentials file
+  fs.unlinkSync(credentialsFile);
+
   // Making job fail if one of the source fails
   process.exit(jobFailFlag ? 1 : 0);
 };
