@@ -9,8 +9,8 @@ const HABITICA_TOKEN = core.getInput("HABITICA_TOKEN");
 
 const habiticaHeaders = {
   "X-Client": `${HABITICA_USER_ID}-action`,
-  "X-Api-Key": HABITICA_TOKEN,
-  "X-Api-User": HABITICA_USER_ID,
+  "x-api-key": HABITICA_TOKEN,
+  "x-api-user": HABITICA_USER_ID,
 };
 
 async function fetchHabiticaData() {
