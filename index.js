@@ -14,6 +14,18 @@ const habiticaHeaders = {
 };
 
 async function fetchHabiticaData() {
+  try {
+    await axios.get("https://habitica.com/api/v3/tasks/user?type=dailys", {
+      headers: habiticaHeaders,
+    });
+  } catch (err) {
+    console.error(err);
+    core.error(
+      `Failed to fetch dailies data from Habitica API: ${err.message}`,
+    );
+    jobFailFlag = true;
+  }
+
   const [dailiesResponse, todosResponse] = await Promise.all([
     axios.get("https://habitica.com/api/v3/tasks/user?type=dailys", {
       headers: habiticaHeaders,
