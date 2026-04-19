@@ -199,6 +199,8 @@ const commitReadme = async () => {
   const credentials = `https://x-access-token:${GITHUB_TOKEN}@github.com\n`;
   fs.writeFileSync(credentialsFile, credentials, { mode: 0o600 });
 
+  await exec("git", ["pull"]);
+
   await exec("git", ["add", README_FILE_PATH]);
   await exec("git", ["commit", "-m", commitMessage]);
   await exec("git", ["push"]);
