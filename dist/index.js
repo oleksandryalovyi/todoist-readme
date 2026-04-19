@@ -3595,7 +3595,7 @@ const exec = __nccwpck_require__(804);
 
 const HABITICA_USER_ID = core.getInput("HABITICA_USER_ID");
 const HABITICA_TOKEN = core.getInput("HABITICA_TOKEN");
-const GITHUB_TOKEN = core.getInput("GITHUB_TOK") || process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 const habiticaHeaders = {
   "X-Client": `${HABITICA_USER_ID}-action`,
@@ -3768,7 +3768,6 @@ const commitReadme = async () => {
   const committerUsername = "Habitica Bot";
   const committerEmail = "noreply@habitica.com";
   const commitMessage = "chore: update habitica stats in README";
-  // const githubToken = process.env.GITHUB_TOKEN;
 
   if (!GITHUB_TOKEN) {
     core.error("GITHUB_TOKEN environment variable is not set");
