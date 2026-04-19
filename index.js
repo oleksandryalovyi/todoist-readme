@@ -46,6 +46,7 @@ async function fetchHabiticaData() {
 async function main() {
   const { dailies, todos } = await fetchHabiticaData();
   const stats = calculateStats(dailies, todos);
+  await exec("git", ["pull"]);
   await updateReadme(stats);
 }
 
@@ -55,7 +56,9 @@ function calculateStats(dailies, todos) {
 
   const now = new Date();
   const weekAgo = new Date();
+  const monthAgo = new Date();
   weekAgo.setDate(now.getDate() - 7);
+  monthAgo.setDate(now.getDate() - 30);
 
   const completedDailiesWeek = dailies.reduce((sum, task) => {
     const count = (task.history || []).filter((entry) => {
@@ -67,7 +70,8 @@ function calculateStats(dailies, todos) {
 
   const monthDailyCompletions = dailies.reduce((sum, task) => {
     const count = (task.history || []).filter((entry) => {
-      return entry.value > 0;
+      const date = new Date(entry.date);
+      return date >= monthAgo && entry.value > 0;
     }).length;
     return sum + count;
   }, 0);
@@ -198,8 +202,6 @@ const commitReadme = async () => {
   const credentialsFile = `${homeDir}/.git-credentials`;
   const credentials = `https://x-access-token:${GITHUB_TOKEN}@github.com\n`;
   fs.writeFileSync(credentialsFile, credentials, { mode: 0o600 });
-
-  await exec("git", ["pull"]);
 
   await exec("git", ["add", README_FILE_PATH]);
   await exec("git", ["commit", "-m", commitMessage]);
