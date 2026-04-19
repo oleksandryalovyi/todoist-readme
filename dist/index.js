@@ -3653,10 +3653,12 @@ function calculateStats(dailies, todos) {
     return sum + count;
   }, 0);
 
-  const totalDailyCompletions = dailies.reduce(
-    (sum, d) => sum + (d.counter || 0),
-    0,
-  );
+  const monthDailyCompletions = dailies.reduce((sum, task) => {
+    const count = (task.history || []).filter((entry) => {
+      return entry.value > 0;
+    }).length;
+    return sum + count;
+  }, 0);
 
   // Todos stats
   const today = new Date().toDateString();
@@ -3669,21 +3671,21 @@ function calculateStats(dailies, todos) {
     return date >= weekAgo;
   }).length;
 
-  const todosAllTime = todos.length;
+  const todosMonth = todos.length;
 
   console.log({
     completedDailiesToday,
     completedDailiesWeek,
-    totalDailyCompletions,
+    monthDailyCompletions,
     todosToday,
     todosThisWeek,
-    todosAllTime,
+    todosMonth,
   });
 
   return {
     today: completedDailiesToday + todosToday,
     week: completedDailiesWeek + todosThisWeek,
-    allTime: totalDailyCompletions + todosAllTime,
+    month: monthDailyCompletions + todosMonth,
   };
 }
 
@@ -3692,7 +3694,7 @@ let jobFailFlag = false;
 const README_FILE_PATH = "./README.md";
 
 async function updateReadme(stats) {
-  const { today, week, allTime } = stats;
+  const { today, week, month } = stats;
 
   const todayStats = [`🎯  Completed **${today}** tasks today`];
   habiticaStats.push(todayStats);
@@ -3700,10 +3702,10 @@ async function updateReadme(stats) {
   const weekStats = [`📅  Completed **${week}** tasks this week`];
   habiticaStats.push(weekStats);
 
-  const allTimeStats = [
-    `⭐  Completed **${Humanize.intComma(allTime)}** tasks all time`,
+  const monthStats = [
+    `⭐  Completed **${Humanize.intComma(month)}** tasks this month`,
   ];
-  habiticaStats.push(allTimeStats);
+  habiticaStats.push(monthStats);
 
   if (habiticaStats.length == 0) return;
 
