@@ -7,7 +7,7 @@ const exec = require("./exec");
 
 const HABITICA_USER_ID = core.getInput("HABITICA_USER_ID");
 const HABITICA_TOKEN = core.getInput("HABITICA_TOKEN");
-const GITHUB_TOKEN = core.getInput("GITHUB_TOKEN") || process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = core.getInput("GITHUB_TOK") || process.env.GITHUB_TOKEN;
 
 const habiticaHeaders = {
   "X-Client": `${HABITICA_USER_ID}-action`,

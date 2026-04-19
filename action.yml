@@ -10,7 +10,7 @@ inputs:
   HABITICA_TOKEN:
     description: "Your Habitica API Token"
     required: true
-  GITHUB_TOKEN:
+  GITHUB_TOK:
     description: "GitHub token for pushing changes"
     required: true
 
