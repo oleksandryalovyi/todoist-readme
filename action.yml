@@ -1,14 +1,17 @@
-name: 'Habitica Readme'
+name: "Habitica Readme"
 author: Oleksandr Yalovyi
-description: '🚧 Updates README with your Habitica stats'
+description: "🚧 Updates README with your Habitica stats"
 
 inputs:
   HABITICA_USER_ID:
-    description: 'Your Habitica User ID'
+    description: "Your Habitica User ID"
     required: true
 
   HABITICA_TOKEN:
-    description: 'Your Habitica API Token'
+    description: "Your Habitica API Token"
+    required: true
+  GITHUB_TOKEN:
+    description: "GitHub token for pushing changes"
     required: true
 
 runs:
